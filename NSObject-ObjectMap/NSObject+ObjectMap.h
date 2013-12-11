@@ -13,11 +13,11 @@
 #define OMTimestamp 0
 #endif
 
-#ifndef OMTimestamp
+#ifndef OMDateFormat
 #define OMDateFormat @"yyyy-MM-dd'T'HH:mm:ss.SSS"
 #endif
 
-#ifndef OMTimestamp
+#ifndef OMTimeZone
 #define OMTimeZone @"UTC"
 #endif
 
