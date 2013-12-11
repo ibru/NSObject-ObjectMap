@@ -9,8 +9,17 @@
 #import <Foundation/Foundation.h>
 #import <objc/runtime.h>
 
+#ifndef OMTimestamp
+#define OMTimestamp 0
+#endif
+
+#ifndef OMTimestamp
 #define OMDateFormat @"yyyy-MM-dd'T'HH:mm:ss.SSS"
+#endif
+
+#ifndef OMTimestamp
 #define OMTimeZone @"UTC"
+#endif
 
 @interface NSObject (ObjectMap)
 

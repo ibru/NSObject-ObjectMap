@@ -31,6 +31,18 @@ static const short _base64DecodingTable[256] = {
 
 @implementation NSObject (ObjectMap)
 
++(NSDateFormatter *) _dateFormatter
+{
+    static NSDateFormatter *formatter;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        formatter = [[NSDateFormatter alloc] init];
+        [formatter setDateFormat:OMDateFormat];
+        [formatter setTimeZone:[NSTimeZone timeZoneWithAbbreviation:OMTimeZone]];
+    });
+    return formatter;
+}
+
 #pragma mark - XML to Object
 +(id)objectOfClass:(NSString *)object fromXML:(NSString *)xml {
     id newObject = [[NSClassFromString(object) alloc] init];
@@ -137,10 +149,7 @@ static const short _base64DecodingTable[256] = {
     
     else if ([self isKindOfClass:[NSDate class]]) {
         [xmlScanner scanUpToString:@"</" intoString:&value];
-        NSDateFormatter *formatter = [[NSDateFormatter alloc] init];
-        [formatter setDateFormat:OMDateFormat];
-        [formatter setTimeZone:[NSTimeZone timeZoneWithAbbreviation:OMTimeZone]];
-        return [formatter dateFromString:value];
+        return [[NSObject _dateFormatter] dateFromString:value];
     }
     else if ([self isKindOfClass:[NSData class]]){
         [xmlScanner scanUpToString:@"</" intoString:&value];
@@ -197,11 +206,12 @@ static const short _base64DecodingTable[256] = {
             
             // check if NSDate or not
             if ([classType isEqualToString:@"T@\"NSDate\""]) {
-                NSDateFormatter *formatter = [[NSDateFormatter alloc] init];
-                [formatter setDateFormat:OMDateFormat];
-                [formatter setTimeZone:[NSTimeZone timeZoneWithAbbreviation:OMTimeZone]];
-                NSString *dateString = [[dict objectForKey:key] stringByReplacingOccurrencesOfString:@"T" withString:@" "];
-                [newObject setValue:[formatter dateFromString:dateString] forKey:propertyName];
+                if (OMTimestamp) {
+                    [newObject setValue:[NSDate dateWithTimeIntervalSince1970:[[[dict objectForKey:key] substringToIndex:10] doubleValue]] forKey:key];
+                } else {
+                    NSString *dateString = [[dict objectForKey:key] stringByReplacingOccurrencesOfString:@"T" withString:@" "];
+                    [newObject setValue:[[NSObject _dateFormatter] dateFromString:dateString] forKey:key];
+                }
             }
             else {
                 if ([dict objectForKey:key] != [NSNull null]) {
@@ -290,7 +300,9 @@ static const char * getPropertyType(objc_property_t property) {
                 // If it's an Array, recur
                 if ([[nestedArray[xx] objectForKey:newKey] isKindOfClass:[NSArray class]]) {
                     NSString *propertyType = [nestedObj valueForKeyPath:[NSString stringWithFormat:@"propertyArrayMap.%@", newKey]];
-                    [nestedObj setValue:[NSObject arrayMapFromArray:[nestedArray[xx] objectForKey:newKey]  forPropertyName:propertyType] forKey:newKey];
+                    if ([nestedObj respondsToSelector:NSSelectorFromString(newKey)]) {
+                        [nestedObj setValue:[NSObject arrayMapFromArray:[nestedArray[xx] objectForKey:newKey]  forPropertyName:propertyType] forKey:newKey];
+                    }
                 }
                 // If it's a Dictionary, create an object, and send to [self objectFromJSON]
                 else if ([[nestedArray[xx] objectForKey:newKey] isKindOfClass:[NSDictionary class]]) {
@@ -306,11 +318,12 @@ static const char * getPropertyType(objc_property_t property) {
                         NSString *classType = [self typeFromProperty:property];
                         // check if NSDate or not
                         if ([classType isEqualToString:@"T@\"NSDate\""]) {
-                            NSDateFormatter *formatter = [[NSDateFormatter alloc] init];
-                            [formatter setDateFormat:OMDateFormat];
-                            [formatter setTimeZone:[NSTimeZone timeZoneWithAbbreviation:OMTimeZone]];
-                            NSString *dateString = [[nestedArray[xx] objectForKey:newKey] stringByReplacingOccurrencesOfString:@"T" withString:@" "];
-                            [nestedObj setValue:[formatter dateFromString:dateString] forKey:newKey];
+                            if (OMTimestamp) {
+                                [nestedObj setValue:[NSDate dateWithTimeIntervalSince1970:[[[nestedArray[xx] objectForKey:newKey] substringToIndex:10] doubleValue]] forKey:newKey];
+                            } else {
+                                NSString *dateString = [[nestedArray[xx] objectForKey:newKey] stringByReplacingOccurrencesOfString:@"T" withString:@" "];
+                                [nestedObj setValue:[[NSObject _dateFormatter] dateFromString:dateString] forKey:newKey];
+                            }
                         }
                         else {
                             [nestedObj setValue:[nestedArray[xx] objectForKey:newKey] forKey:newKey];
@@ -559,11 +572,7 @@ static const char * getPropertyType(objc_property_t property) {
 
 +(NSString *)dateForObject:(id)obj{
     NSDate *date = (NSDate *)obj;
-    
-    NSDateFormatter *formatter = [[NSDateFormatter alloc] init];
-    [formatter setDateFormat:OMDateFormat];
-    [formatter setTimeZone:[NSTimeZone timeZoneWithAbbreviation:OMTimeZone]];
-    return [formatter stringFromDate:date];
+    return [[NSObject _dateFormatter] stringFromDate:date];
 }
 
 #pragma mark - SOAP/XML Serialization
@@ -685,10 +694,7 @@ static const char * getPropertyType(objc_property_t property) {
     NSMutableString *soapString = [[NSMutableString alloc] initWithString:@""];
     
     if ([[dict valueForKey:key] isKindOfClass:[NSDate class]]) {
-        NSDateFormatter *formatter = [[NSDateFormatter alloc] init];
-        [formatter setDateFormat:OMDateFormat];
-        [formatter setTimeZone:[NSTimeZone timeZoneWithAbbreviation:OMTimeZone]];
-        return [formatter stringFromDate:[dict valueForKey:key]];
+        return [[NSObject _dateFormatter] stringFromDate:[dict valueForKey:key]];
         
         return [dict valueForKey:key];
     }
