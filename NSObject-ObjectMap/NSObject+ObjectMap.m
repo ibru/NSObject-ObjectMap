@@ -196,6 +196,10 @@ static const short _base64DecodingTable[256] = {
         else if ([[dict objectForKey:key] isKindOfClass:[NSArray class]]) {
             NSArray *nestedArray = [dict objectForKey:key];
             NSString *propertyType = [newObject valueForKeyPath:[NSString stringWithFormat:@"propertyArrayMap.%@", key]];
+            if (propertyType == nil) {
+                NSLog(@"No type for property key: %@", key);
+                propertyType = @"NSMutableDictionary";
+            }
             [newObject setValue:[NSObject arrayMapFromArray:nestedArray forPropertyName:propertyType] forKey:propertyName];
         }
         
