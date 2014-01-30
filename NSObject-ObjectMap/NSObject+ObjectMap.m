@@ -877,7 +877,7 @@ static const char * getPropertyType(objc_property_t property) {
     char * strResult;
     
     // Get the Raw Data length and ensure we actually have data
-    int intLength = [objData length];
+    int intLength = (int)[objData length];
     if (intLength == 0) return nil;
     
     // Setup the String-based Result placeholder and pointer within that placeholder
